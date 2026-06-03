@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Site Inspector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --border: #1e1e2e;
+      --accent: #00ff88;
+      --accent2: #7c3aed;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text: #e4e4f0;
+      --muted: #6b6b8a;
+      --card: #14141f;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 380px;
+      min-height: 500px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      overflow-x: hidden;
+    }
+
+    /* === HEADER === */
+    .header {
+      background: linear-gradient(135deg, #0a0a0f 0%, #111128 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 120px; height: 120px;
+      background: radial-gradient(circle, rgba(0,255,136,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .logo {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), #00ccff);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #fff;
+    }
+    .header p {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.5px;
+    }
+
+    /* Score bar */
+    .trust-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .trust-label {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      white-space: nowrap;
+    }
+    .trust-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .trust-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s ease;
+      background: var(--accent);
+    }
+    .trust-score-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(0,255,136,0.1);
+      color: var(--accent);
+      border: 1px solid rgba(0,255,136,0.2);
+    }
+
+    /* === CURRENT URL === */
+    .url-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .url-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+    .protocol-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .protocol-https { background: rgba(0,255,136,0.12); color: var(--accent); border: 1px solid rgba(0,255,136,0.2); }
+    .protocol-http { background: rgba(239,68,68,0.12); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+
+    .url-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* === TABS === */
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 0 0 auto;
+      padding: 10px 10px;
+      text-align: center;
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      font-family: 'Space Mono', monospace;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* === CONTENT PANELS === */
+    .panel { display: none; padding: 12px; }
+    .panel.active { display: block; }
+
+    /* === CARDS === */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-header .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* Rows inside card */
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-key {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+    .info-val {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      text-align: right;
+      max-width: 200px;
+      word-break: break-all;
+    }
+    .info-val.good { color: var(--accent); }
+    .info-val.warn { color: var(--warn); }
+    .info-val.bad { color: var(--danger); }
+
+    /* === SIGNALS GRID === */
+    .signals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 10px;
+    }
+    .signal-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 10px;
+      font-family: 'Space Mono', monospace;
+    }
+    .signal-chip .icon { font-size: 12px; }
+    .signal-chip.ok { border-color: rgba(0,255,136,0.2); }
+    .signal-chip.warn { border-color: rgba(245,158,11,0.2); }
+    .signal-chip.bad { border-color: rgba(239,68,68,0.2); }
+    .signal-chip.ok .label { color: var(--accent); }
+    .signal-chip.warn .label { color: var(--warn); }
+    .signal-chip.bad .label { color: var(--danger); }
+
+    /* === VERDICT BOX === */
+    .verdict {
+      margin: 8px;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      border: 1px solid;
+    }
+    .verdict.safe { background: rgba(0,255,136,0.05); border-color: rgba(0,255,136,0.2); }
+    .verdict.suspicious { background: rgba(245,158,11,0.05); border-color: rgba(245,158,11,0.2); }
+    .verdict.danger { background: rgba(239,68,68,0.05); border-color: rgba(239,68,68,0.2); }
+    .verdict-icon { font-size: 28px; line-height: 1; }
+    .verdict-text h3 {
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .verdict.safe .verdict-text h3 { color: var(--accent); }
+    .verdict.suspicious .verdict-text h3 { color: var(--warn); }
+    .verdict.danger .verdict-text h3 { color: var(--danger); }
+    .verdict-text p {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* === WHOIS LOOKUP === */
+    .lookup-box {
+      padding: 10px;
+    }
+    .lookup-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, var(--accent2), #4f46e5);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-bottom: 8px;
+    }
+    .lookup-btn:hover { opacity: 0.85; }
+    .lookup-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .lookup-result {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-height: 160px;
+      overflow-y: auto;
+      display: none;
+    }
+    .lookup-result.visible { display: block; }
+    .lookup-result .field { color: var(--accent); }
+
+    /* === LOADING === */
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* === SCROLLBAR === */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* === FOOTER === */
+    .footer {
+      padding: 8px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+    }
+    .refresh-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .tag {
+      display: inline-block;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .tag-green { background: rgba(0,255,136,0.1); color: var(--accent); }
+    .tag-red { background: rgba(239,68,68,0.1); color: var(--danger); }
+    .tag-yellow { background: rgba(245,158,11,0.1); color: var(--warn); }
+
+    .separator {
+      height: 1px;
+      background: var(--border);
+      margin: 6px 0;
+    }
+
+    /* === SETTINGS PANEL === */
+    .settings-section {
+      margin-bottom: 14px;
+    }
+    .settings-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+    .setting-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+    }
+    .setting-sub {
+      font-size: 9px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      margin-top: 2px;
+    }
+    .threshold-control {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+    .threshold-slider {
+      -webkit-appearance: none;
+      width: 120px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+    }
+    .threshold-slider.green::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+    .threshold-slider.yellow::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--warn);
+      cursor: pointer;
+    }
+    .threshold-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 36px;
+      text-align: right;
+    }
+    .threshold-preview {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      line-height: 2;
+    }
+    .preview-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .preview-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .settings-save-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, var(--accent2), #5b21b6);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: opacity 0.2s;
+    }
+    .settings-save-btn:hover { opacity: 0.85; }
+    .settings-save-btn:active { opacity: 0.7; }
+    .save-confirm {
+      text-align: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      margin-top: 8px;
+      min-height: 16px;
+      transition: opacity 0.3s;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .toggle {
+      position: relative;
+      width: 38px; height: 20px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--border);
+      border-radius: 20px;
+      transition: 0.3s;
+    }
+    .toggle-slider:before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 3px; bottom: 3px;
+      background: var(--muted);
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--accent2); }
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(18px);
+      background: #fff;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">🔍</div>
+    <div>
+      <h1>SITE INSPECTOR</h1>
+      <p>TRUST & AUTHENTICITY CHECKER</p>
+    </div>
+  </div>
+  <div class="trust-bar-wrap" id="trustBarWrap" style="display:none">
+    <span class="trust-label">TRUST</span>
+    <div class="trust-bar">
+      <div class="trust-bar-fill" id="trustBarFill" style="width:0%"></div>
+    </div>
+    <span class="trust-score-badge" id="trustScoreBadge">—</span>
+  </div>
+</div>
+
+<div class="url-bar" id="urlBar" style="display:none">
+  <div class="url-pill">
+    <span class="protocol-badge" id="protocolBadge"></span>
+    <span class="url-text" id="urlText"></span>
+  </div>
+</div>
+
+<div class="tabs" id="tabs" style="display:none">
+  <div class="tab active" data-tab="overview">Overview</div>
+  <div class="tab" data-tab="ssl">SSL / Cert</div>
+  <div class="tab" data-tab="signals">Signals</div>
+  <div class="tab" data-tab="whois">WHOIS</div>
+  <div class="tab" data-tab="advanced">Advanced</div>
+  <div class="tab" data-tab="settings">⚙️ Settings</div>
+</div>
+
+<!-- LOADING STATE -->
+<div class="panel active" id="loadingPanel">
+  <div class="loading">
+    <div class="spinner"></div>
+    Analysing site…
+  </div>
+</div>
+
+<!-- OVERVIEW TAB -->
+<div class="panel" id="panel-overview">
+  <div id="verdictBox"></div>
+
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>DOMAIN INFO</div>
+    <div class="info-row">
+      <span class="info-key">Domain</span>
+      <span class="info-val" id="ov-domain">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">TLD</span>
+      <span class="info-val" id="ov-tld">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Protocol</span>
+      <span class="info-val" id="ov-protocol">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">IP Address</span>
+      <span class="info-val" id="ov-ip">Resolving…</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Domain Age Est.</span>
+      <span class="info-val" id="ov-age">—</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>PAGE METADATA</div>
+    <div class="info-row">
+      <span class="info-key">Title</span>
+      <span class="info-val" id="ov-title">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Language</span>
+      <span class="info-val" id="ov-lang">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Generator</span>
+      <span class="info-val" id="ov-gen">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Load Time</span>
+      <span class="info-val" id="ov-load">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Charset</span>
+      <span class="info-val" id="ov-charset">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- SSL TAB -->
+<div class="panel" id="panel-ssl">
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>SSL CERTIFICATE</div>
+    <div class="info-row">
+      <span class="info-key">Status</span>
+      <span class="info-val" id="ssl-status">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Protocol</span>
+      <span class="info-val" id="ssl-proto">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Certificate Valid</span>
+      <span class="info-val" id="ssl-valid">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Issued To</span>
+      <span class="info-val" id="ssl-issuedTo">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Issuer (CA)</span>
+      <span class="info-val" id="ssl-issuer">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Valid From</span>
+      <span class="info-val" id="ssl-from">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Expires</span>
+      <span class="info-val" id="ssl-expiry">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Days Until Expiry</span>
+      <span class="info-val" id="ssl-days">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Wildcard Cert</span>
+      <span class="info-val" id="ssl-wildcard">—</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>SECURITY NOTE</div>
+    <div style="padding: 10px 12px;">
+      <p style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); line-height:1.7;" id="ssl-note">
+        SSL certificate information is retrieved via the browser's security API. Browsers only expose limited cert details via JavaScript. For full chain inspection, use a dedicated SSL checker tool.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNALS TAB -->
+<div class="panel" id="panel-signals">
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>TRUST SIGNALS</div>
+    <div class="signals-grid" id="signalsGrid">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>PAGE CONTENT ANALYSIS</div>
+    <div class="info-row">
+      <span class="info-key">External Links</span>
+      <span class="info-val" id="sig-extlinks">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Images</span>
+      <span class="info-val" id="sig-images">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Mixed HTTP Links</span>
+      <span class="info-val" id="sig-mixed">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Copyright Notice</span>
+      <span class="info-val" id="sig-copyright">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Cookie Consent</span>
+      <span class="info-val" id="sig-cookie">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Suspicious TLD</span>
+      <span class="info-val" id="sig-tld">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- WHOIS TAB -->
+<div class="panel" id="panel-whois">
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>WHOIS / DOMAIN LOOKUP</div>
+    <div class="lookup-box">
+      <p style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); margin-bottom:10px; line-height:1.6;">
+        Fetch live registration data from a WHOIS API. Reveals domain creation date, registrar, and owner info (if not privacy-protected).
+      </p>
+      <button class="lookup-btn" id="whoisBtn">🔎 RUN WHOIS LOOKUP</button>
+      <div class="lookup-result" id="whoisResult"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>VERIFICATION TIPS</div>
+    <div style="padding: 10px 12px;">
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); line-height:2;">
+        <div>✅ Check domain was registered years ago</div>
+        <div>✅ Registrar should be a known company</div>
+        <div>✅ Avoid sites with hidden WHOIS data + new domain</div>
+        <div>✅ SSL + Privacy Policy + Contact = good signs</div>
+        <div>⚠️ Brand-new domains (&lt;1yr) are higher risk</div>
+        <div>⚠️ .xyz .top .click domains = higher phishing rate</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ADVANCED TAB -->
+<div class="panel" id="panel-advanced">
+
+  <!-- Google Safe Browsing -->
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>🛡️ GOOGLE SAFE BROWSING</div>
+    <div class="lookup-box">
+      <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Check if this URL is flagged as phishing, malware, or unwanted software by Google's Safe Browsing database.
+      </p>
+      <button class="lookup-btn" id="safeBrowsingBtn">🛡️ CHECK SAFE BROWSING</button>
+      <div class="lookup-result" id="safeBrowsingResult"></div>
+    </div>
+  </div>
+
+  <!-- Wayback Machine Age -->
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>📅 WAYBACK MACHINE AGE</div>
+    <div class="lookup-box">
+      <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Find the earliest archived snapshot of this domain — reveals true site age independently of WHOIS data.
+      </p>
+      <button class="lookup-btn" id="waybackBtn">📅 CHECK WAYBACK MACHINE</button>
+      <div class="lookup-result" id="waybackResult"></div>
+    </div>
+  </div>
+
+  <!-- DNS Blacklist -->
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>🚫 DNS BLACKLIST LOOKUP</div>
+    <div class="lookup-box">
+      <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Check multiple public threat-intelligence feeds for this domain/IP (AbuseIPDB, Cloudflare DNS).
+      </p>
+      <button class="lookup-btn" id="dnsBlacklistBtn">🚫 CHECK BLACKLISTS</button>
+      <div class="lookup-result" id="dnsBlacklistResult"></div>
+    </div>
+  </div>
+
+  <!-- SPF / DMARC -->
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>📧 EMAIL SPOOFING RISK (SPF/DMARC)</div>
+    <div class="lookup-box">
+      <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Checks if this domain has SPF and DMARC DNS records. Missing records mean anyone can send spoofed email from this domain.
+      </p>
+      <button class="lookup-btn" id="spfDmarcBtn">📧 CHECK SPF / DMARC</button>
+      <div class="lookup-result" id="spfDmarcResult"></div>
+    </div>
+  </div>
+
+  <!-- Mixed Content Detector -->
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>🔀 MIXED CONTENT DETECTOR</div>
+    <div class="lookup-box">
+      <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Scans the page for insecure HTTP resources loaded on an HTTPS page, which can compromise security.
+      </p>
+      <button class="lookup-btn" id="mixedContentBtn">🔀 SCAN MIXED CONTENT</button>
+      <div class="lookup-result" id="mixedContentResult"></div>
+    </div>
+  </div>
+
+  <!-- Payment Form Warning -->
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>💳 PAYMENT FORM WARNING</div>
+    <div class="lookup-box">
+      <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Detects payment forms, card input fields, and checkout indicators on the page to assess financial data risk.
+      </p>
+      <button class="lookup-btn" id="paymentFormBtn">💳 SCAN FOR PAYMENT FORMS</button>
+      <div class="lookup-result" id="paymentFormResult"></div>
+    </div>
+  </div>
+
+  <!-- Redirect Chain Tracer -->
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>🔗 REDIRECT CHAIN TRACER</div>
+    <div class="lookup-box">
+      <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Traces the full redirect chain to see if the current URL passed through any suspicious intermediate domains.
+      </p>
+      <button class="lookup-btn" id="redirectBtn">🔗 TRACE REDIRECTS</button>
+      <div class="lookup-result" id="redirectResult"></div>
+    </div>
+  </div>
+
+  <!-- Site Change Alerts -->
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>🔔 SITE CHANGE ALERTS</div>
+    <div class="lookup-box">
+      <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Compares the current page snapshot with a previously saved hash to detect if the site has been altered.
+      </p>
+      <button class="lookup-btn" id="siteChangeBtn">🔔 CHECK FOR CHANGES</button>
+      <div class="lookup-result" id="siteChangeResult"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer" id="footer" style="display:none">
+  <span class="footer-text" id="footerTime">—</span>
+  <button class="refresh-btn" id="refreshBtn">↻ REFRESH</button>
+</div>
+
+
+<!-- SETTINGS TAB -->
+<div class="panel" id="panel-settings">
+
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>TRUST SCORE THRESHOLDS</div>
+    <div style="padding: 12px;">
+      <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:14px;line-height:1.7;">
+        Set the score cutoffs for SAFE vs CAUTION vs DANGER verdicts. Scores are 0–100.
+      </p>
+
+      <div class="settings-section">
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">✅ Safe Threshold</div>
+            <div class="setting-sub">Score ≥ this → SAFE verdict</div>
+          </div>
+          <div class="threshold-control">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" class="threshold-slider green" id="safeThresholdSlider" min="50" max="95" step="1" value="70">
+              <span class="threshold-val" id="safeThresholdVal" style="color:var(--accent)">70</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">⚠️ Caution Threshold</div>
+            <div class="setting-sub">Score ≥ this → CAUTION (below → DANGER)</div>
+          </div>
+          <div class="threshold-control">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" class="threshold-slider yellow" id="cautionThresholdSlider" min="10" max="69" step="1" value="45">
+              <span class="threshold-val" id="cautionThresholdVal" style="color:var(--warn)">45</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="threshold-preview" id="thresholdPreview">
+          <div class="preview-row"><div class="preview-dot" style="background:var(--accent)"></div><span id="prev-safe" style="color:var(--accent)">70–100 → ✅ SAFE</span></div>
+          <div class="preview-row"><div class="preview-dot" style="background:var(--warn)"></div><span id="prev-caution" style="color:var(--warn)">45–69 → ⚠️ CAUTION</span></div>
+          <div class="preview-row"><div class="preview-dot" style="background:var(--danger)"></div><span id="prev-danger" style="color:var(--danger)">0–44 → 🚨 DANGER</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>AUTO-SCAN OPTIONS</div>
+    <div style="padding: 12px;">
+      <div class="toggle-row">
+        <div>
+          <div class="setting-label">Auto-run WHOIS on open</div>
+          <div class="setting-sub">Fetch domain age automatically</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="toggleAutoWhois"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="setting-label">Auto-scan Mixed Content</div>
+          <div class="setting-sub">Check on every page load</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="toggleAutoMixed"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="setting-label">Auto-scan Payment Forms</div>
+          <div class="setting-sub">Warn if checkout detected</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="toggleAutoPayment"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="dot"></span>DISPLAY</div>
+    <div style="padding: 12px;">
+      <div class="toggle-row">
+        <div>
+          <div class="setting-label">Show Score Badge</div>
+          <div class="setting-sub">Show numeric score in header</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="toggleShowScore" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="setting-label">Compact Mode</div>
+          <div class="setting-sub">Reduce panel padding</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="toggleCompact"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <button class="settings-save-btn" id="saveSettingsBtn">💾 SAVE SETTINGS</button>
+  <div class="save-confirm" id="saveConfirm"></div>
+
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
+
+<!-- ===== ADVANCED TAB ===== -->
+<!-- (injected before footer — actual insertion done via sed below) -->
